@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Gold Converter" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <title>Gold Price Converter</title>
+  <style>
+    :root { --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb; --shadow:0 8px 24px rgba(2,6,23,0.08); --primary:#2563eb; --danger:#dc2626; --focus:rgba(37,99,235,0.22); --error:#dc2626; }
+    *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;background:var(--bg);color:var(--text)}
+    .container{max-width:560px;margin:0 auto;padding:8px 10px calc(92px + env(safe-area-inset-bottom));min-height:100svh}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:12px}
+    h1{font-size:clamp(1rem,3.2vw,1.35rem);text-align:center;margin:0 0 6px}.sub{text-align:center;color:var(--muted);margin:0 0 10px;font-size:.9rem}
+    label{display:block;font-size:.9rem;color:var(--text);margin:6px 0 4px}
+    select,input,textarea{width:100%;padding:9px 10px;background:#f8fafc;color:var(--text);border:1px solid var(--border);border-radius:10px;outline:none;font-size:.95rem;transition:box-shadow .15s ease,border-color .15s ease}
+    select:focus,input:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--focus)}
+    .grid{display:grid;gap:8px;grid-template-columns:1fr}@media(min-width:640px){.grid.two{grid-template-columns:1fr 1fr}}
+    .help{font-size:.8rem;color:var(--muted);margin-top:4px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#f8fafc;border:1px solid var(--border);color:var(--muted);font-size:.85rem}
+    .value{font-weight:700;color:var(--text)}
+    .totalCard{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:9px}.totalTitle{color:var(--muted);font-size:.84rem;margin-bottom:4px}.totalValue{font-size:clamp(1.02rem,3vw,1.22rem);font-weight:800}
+    .fabBar{position:fixed;left:0;right:0;bottom:8px;z-index:20;display:flex;justify-content:center;pointer-events:none}
+    .fabWrap{width:min(560px,100% - 16px);display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;pointer-events:auto}
+    .btn{appearance:none;border:1px solid transparent;border-radius:12px;padding:10px 11px;font-weight:700;cursor:pointer;font-size:.94rem}
+    .btnPrimary{background:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.25)}
+    .btnDanger{background:var(--danger);color:#fff;box-shadow:0 6px 18px rgba(220,38,38,.18)}
+    .btnGhost{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}
+    .btn:active{transform:translateY(1px)}
+    .error{color:var(--error);font-size:.86rem;margin-top:6px} footer{margin-top:10px;color:var(--muted);font-size:.8rem;text-align:center}
+    .tests,.debug{margin-top:10px}.test-list{list-style:none;padding:0;display:grid;gap:6px}.test-item{border:1px solid var(--border);border-radius:10px;padding:8px;background:#f8fafc}.pass{color:#16a34a;font-weight:700}.fail{color:#ef4444;font-weight:700} code{color:#3730a3;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84rem} #debugLog{width:100%;height:130px;border:1px solid var(--border);background:#f8fafc;border-radius:10px;padding:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84rem}
+    /* Install sheet */
+    .sheetBackdrop{position:fixed;inset:0;background:rgba(2,6,23,.45);backdrop-filter:saturate(150%) blur(4px);display:none;z-index:50}
+    .sheet{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);width:min(560px,100% - 16px);background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 16px 40px rgba(2,6,23,.26);padding:12px;display:none;z-index:51}
+    .sheet h3{margin:0 0 6px;font-size:1rem}
+    .sheet p{margin:4px 0;color:#475569;font-size:.9rem}
+    .sheet .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .sheet .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Gold Price Converter</h1>
+      <p class="sub">Spot → grams/kg • Purity • Totals • Shareable link</p>
+
+      <div class="grid two">
+        <div>
+          <label for="currency">Currency</label>
+          <select id="currency" aria-label="Currency">
+            <option value="USD" selected>USD — US Dollar</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="ZAR">ZAR — South African Rand</option>
+            <option value="AED">AED — UAE Dirham</option>
+            <option value="HKD">HKD — Hong Kong Dollar</option>
+            <option value="AUD">AUD — Australian Dollar</option>
+            <option value="CAD">CAD — Canadian Dollar</option>
+            <option value="JPY">JPY — Japanese Yen</option>
+          </select>
+        </div>
+        <div>
+          <label for="ozPrice">Price per troy ounce</label>
+          <div class="grid" style="grid-template-columns:1fr auto; gap:8px; align-items:center;">
+            <input id="ozPrice" type="number" inputmode="decimal" step="any" placeholder="e.g. 2400" aria-describedby="ozHelp" />
+            <button id="refreshBtn" class="btn btnGhost" title="Refresh live spot">↻</button>
+          </div>
+          <div id="ozHelp" class="help">Auto-fills with live spot (via your Vercel proxy). You can overwrite.</div>
+          <div id="liveStatus" class="help" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top: 4px;">
+        <div>
+          <label for="qty">Quantity</label>
+          <input id="qty" type="number" inputmode="decimal" step="any" placeholder="e.g. 1" />
+        </div>
+        <div>
+          <label for="unit">Unit</label>
+          <select id="unit" aria-label="Quantity unit">
+            <option value="g">grams (g)</option>
+            <option value="kg" selected>kilograms (kg)</option>
+          </select>
+        </div>
+      </div>
+
+      <details style="margin-top: 6px;">
+        <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Optional: purity / fineness</summary>
+        <div class="grid two" style="margin-top: 8px;">
+          <div>
+            <label for="purity">Purity (karat)</label>
+            <select id="purity">
+              <option value="24" selected>24k (99.9%)</option>
+              <option value="22">22k (91.6%)</option>
+              <option value="21">21k (87.5%)</option>
+              <option value="18">18k (75.0%)</option>
+              <option value="14">14k (58.5%)</option>
+              <option value="10">10k (41.7%)</option>
+              <option value="custom">Custom fineness…</option>
+            </select>
+          </div>
+          <div id="finenessWrap" style="display:none;">
+            <label for="fineness">Fineness (0–1)</label>
+            <input id="fineness" type="number" inputmode="decimal" min="0" max="1" step="0.001" placeholder="e.g. 0.916" />
+            <div class="help">Mass fraction of pure gold (e.g., 0.585 for 14k).</div>
+          </div>
+        </div>
+        <div class="help">Totals are adjusted by purity. Leave at 24k for pure gold pricing.</div>
+      </details>
+
+      <div id="error" class="error" role="alert" style="display:none;">Please enter a valid price per ounce (&gt; 0).</div>
+
+      <div class="grid" style="margin-top:10px; gap:10px;">
+        <span class="pill">1 troy oz = <span class="value" id="gramsPerOz">31.1034768 g</span></span>
+        <div class="grid two">
+          <div class="pill">Price per gram: <span class="value" id="perGram">—</span></div>
+          <div class="pill">Price per kilogram: <span class="value" id="perKg">—</span></div>
+        </div>
+        <div class="totalCard">
+          <div class="totalTitle">Total for quantity</div>
+          <div class="totalValue" id="total">—</div>
+        </div>
+      </div>
+
+      <details class="debug">
+        <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Connectivity & Live Price Debug</summary>
+        <div class="help">Tests your Vercel proxy (<code>/api/spot</code>). Optionally test Metals-API directly by saving a key locally (for your browser only).</div>
+        <div style="display:grid; gap:8px; margin-top:8px;">
+          <div class="grid two">
+            <div>
+              <label for="metalsKey">Metals-API access key (client test only)</label>
+              <input id="metalsKey" type="text" placeholder="pk_live_xxxxx (optional client test)" />
+              <div class="help">Production calls use the proxy. This key is only for local direct tests.</div>
+            </div>
+            <div style="align-self:end;">
+              <button id="saveKeyBtn" class="btn btnGhost" type="button">Save key locally</button>
+            </div>
+          </div>
+          <button id="debugBtn" class="btn btnGhost">Run debug test</button>
+          <textarea id="debugLog" readonly placeholder="Logs will appear here…"></textarea>
+          <div class="help">Direct test URL shape (needs key): <code>https://metals-api.com/api/latest?access_key=YOUR_KEY&amp;base=USD&amp;symbols=XAU,USD</code></div>
+        </div>
+      </details>
+
+      <details class="tests">
+        <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Run quick self-tests</summary>
+        <div class="help">Checks core math and purity handling (2-dec rounding for comparison).</div>
+        <div style="margin-top:8px; display:grid; gap:8px;">
+          <button id="runTests" type="button" class="btn btnGhost">Run tests</button>
+          <ul id="testList" class="test-list"></ul>
+          <textarea id="testLog" rows="4" placeholder="Test log…" readonly></textarea>
+        </div>
+      </details>
+
+      <details class="debug">
+        <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Vercel serverless function: <code>api/spot.js</code> (click to view/copy)</summary>
+        <div class="help">Create a file at <code>api/spot.js</code> in your repo, then paste the code below. On Vercel, set <code>METALS_API_KEY</code> in Project → Settings → Environment Variables.</div>
+        <div style="display:grid; gap:8px; margin-top:8px;">
+          <button id="copySpotBtn" class="btn btnGhost" type="button">Copy <code>api/spot.js</code> to clipboard</button>
+<pre id="spotCode" style="white-space:pre;overflow:auto;border:1px solid var(--border);border-radius:10px;background:#0b1020;color:#e5e7eb;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem"></pre>
+        </div>
+      </details>
+
+      <details class="debug">
+        <summary style="cursor:pointer; color:#0f172a; font-weight:600;">PWA files: <code>manifest.webmanifest</code> & <code>sw.js</code> (click to view/copy)</summary>
+        <div class="help">Add both files at the repo root. Also add icons at <code>/icons/icon-192.png</code> and <code>/icons/icon-512.png</code>. Use the button to generate simple placeholder icons.</div>
+        <div style="display:grid; gap:8px; margin-top:8px;">
+          <button id="copyManifestBtn" class="btn btnGhost" type="button">Copy <code>manifest.webmanifest</code></button>
+<pre id="manifestCode" style="white-space:pre;overflow:auto;border:1px solid var(--border);border-radius:10px;background:#0b1020;color:#e5e7eb;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem"></pre>
+          <button id="copySwBtn" class="btn btnGhost" type="button">Copy <code>sw.js</code></button>
+<pre id="swCode" style="white-space:pre;overflow:auto;border:1px solid var(--border);border-radius:10px;background:#0b1020;color:#e5e7eb;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem"></pre>
+          <div class="grid two">
+            <button id="gen192" class="btn btnGhost" type="button">Download icon-192.png</button>
+            <button id="gen512" class="btn btnGhost" type="button">Download icon-512.png</button>
+          </div>
+        </div>
+      </details>
+
+      <footer>
+        <p>Gold trades in <strong>troy ounces</strong> (31.1034768 g). Totals exclude fees, spreads, or taxes.</p>
+      </footer>
+    </div>
+  </div>
+
+  <div class="fabBar" role="region" aria-label="Actions">
+    <div class="fabWrap">
+      <button class="btn btnGhost" id="installBtn" type="button" title="Install or add to home screen">Install</button>
+      <button class="btn btnPrimary" id="shareBtnBottom" type="button" title="Copy a link with your current inputs">Share</button>
+      <button class="btn btnDanger" id="resetBtnBottom" type="button" title="Clear all inputs">Reset</button>
+    </div>
+  </div>
+
+  <!-- Install helper UI -->
+  <div id="installBackdrop" class="sheetBackdrop"></div>
+  <div id="installSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="installTitle" aria-describedby="installDesc">
+    <h3 id="installTitle">Add to Home Screen</h3>
+    <p id="installDesc">Get a full-screen experience and quick access from your home screen.</p>
+    <div class="row">
+      <div>
+        <strong>iPhone / iPad (Safari)</strong>
+        <p>1. Tap <em>Share</em> (square with an up arrow).</p>
+        <p>2. Choose <em>Add to Home Screen</em>.</p>
+        <p>3. Tap <em>Add</em>.</p>
+      </div>
+      <div>
+        <strong>Android (Chrome)</strong>
+        <p>1. Tap <em>Install app</em> if prompted, or menu ⋮.</p>
+        <p>2. Choose <em>Add to Home screen</em>.</p>
+        <p>3. Confirm <em>Add</em>.</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="installClose" class="btn btnGhost" type="button">Close</button>
+      <button id="installDontShow" class="btn btnDanger" type="button">Don’t show again</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const TROY_OUNCE_IN_GRAMS = 31.1034768;
+      const STORAGE_KEY = 'gold-price-converter-state-v8';
+      const KEY_STORAGE = 'metals_api_key'; // optional client test
+      const DISMISS_INSTALL = 'install_help_dismissed';
+
+      const el = (id) => document.getElementById(id);
+      const currencyEl = el('currency'), ozPriceEl = el('ozPrice'), qtyEl = el('qty'), unitEl = el('unit');
+      const purityEl = el('purity'), finenessWrap = el('finenessWrap'), finenessEl = el('fineness');
+      const errorEl = el('error'), liveStatus = el('liveStatus');
+      const perGramEl = el('perGram'), perKgEl = el('perKg'), totalEl = el('total');
+      const refreshBtn = el('refreshBtn');
+      const runTestsBtn = el('runTests'), testList = el('testList'), testLog = el('testLog');
+      const debugBtn = el('debugBtn'), debugLog = el('debugLog'), metalsKeyInput = el('metalsKey'), saveKeyBtn = el('saveKeyBtn');
+      const installBtn = el('installBtn');
+      const installBackdrop = el('installBackdrop');
+      const installSheet = el('installSheet');
+      const installClose = el('installClose');
+      const installDontShow = el('installDontShow');
+
+      let deferredPrompt = null; // for Android's beforeinstallprompt
+      let lastParams = ''; let useLiveSpot = false;
+
+      const numberOrZero = (v) => { const n = parseFloat(String(v).replace(/,/g, '')); return Number.isFinite(n) ? n : 0; };
+      const fmtMoney = (v, cur) => { try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(v); } catch { return (v||0).toFixed(2)+' '+cur; } };
+      const karatToFineness = (k) => { const n=Number(k); if(!Number.isFinite(n)||n<=0)return 1; return Math.max(0, Math.min(1, n/24)); };
+      const currentFineness = () => purityEl.value==='custom' ? Math.max(0, Math.min(1, numberOrZero(finenessEl.value))) : karatToFineness(purityEl.value);
+      const canUseHistory = () => { try { const u=new URL(location.href); if(u.protocol==='about:')return false; return typeof history.replaceState==='function'; } catch { return false; } };
+
+      // Service Worker for PWA/offline
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(()=>{});
+      }
+
+      function showInstallHelp(){ installBackdrop.style.display='block'; installSheet.style.display='block'; }
+      function hideInstallHelp(){ installBackdrop.style.display='none'; installSheet.style.display='none'; }
+
+      const isiOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+
+      window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; /* keep Install button visible for Android */ });
+
+      // Always show Install button so iOS users see guidance
+      if (installBtn) installBtn.style.display = '';
+
+      if (installBtn) installBtn.addEventListener('click', async () => {
+        try {
+          if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; return; }
+          // iOS & others: show guidance sheet
+          showInstallHelp();
+        } catch {}
+      });
+      if (installClose) installClose.addEventListener('click', hideInstallHelp);
+      if (installDontShow) installDontShow.addEventListener('click', ()=>{ try{ localStorage.setItem(DISMISS_INSTALL,'1'); }catch{} hideInstallHelp(); });
+
+      // Nudge iOS users once on first visit
+      try {
+        if (!isStandalone() && isiOS() && !localStorage.getItem(DISMISS_INSTALL)) {
+          setTimeout(showInstallHelp, 1200);
+        }
+      } catch {}
+
+      function buildParams(){
+        const params = new URLSearchParams({ cur: currencyEl.value || '', oz: numberOrZero(ozPriceEl.value)?String(numberOrZero(ozPriceEl.value)):'', qty: numberOrZero(qtyEl.value)?String(numberOrZero(qtyEl.value)):'', unit: unitEl.value || 'kg', karat: purityEl.value, fineness: purityEl.value==='custom' ? (finenessEl.value || '') : '' });
+        lastParams = params.toString(); return params;
+      }
+      function persistState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(buildParams()))); } catch {} }
+      function restoreFromStorage(){ try { const raw=localStorage.getItem(STORAGE_KEY); if(!raw)return; const d=JSON.parse(raw); if(d.cur)currencyEl.value=d.cur; if(d.oz)ozPriceEl.value=d.oz; if(d.qty)qtyEl.value=d.qty; if(d.unit)unitEl.value=d.unit; if(d.karat)purityEl.value=d.karat; if(d.karat==='custom'){ finenessWrap.style.display=''; if(d.fineness)finenessEl.value=d.fineness; } } catch {} }
+      function setLiveStatus(msg){ if(!liveStatus)return; if(!msg){ liveStatus.style.display='none'; liveStatus.textContent=''; return; } liveStatus.style.display=''; liveStatus.textContent=msg; }
+
+      const getKeyFromQuery = () => { try { return new URLSearchParams(location.search).get('mkey') || ''; } catch { return ''; } };
+      const loadKey = () => { try { return localStorage.getItem(KEY_STORAGE) || ''; } catch { return ''; } };
+      const saveKey = (k) => { try { localStorage.setItem(KEY_STORAGE, k || ''); } catch {} };
+
+      async function fetchJSON(url, init){ const res = await fetch(url, init || { cache: 'no-store' }); if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); }
+
+      async function fetchSpot(currency){
+        try { const url = `/api/spot?cur=${encodeURIComponent(currency)}`; const data = await fetchJSON(url); if (data && typeof data.oz === 'number') return { rate: data.oz, date: data.date || '', src: 'proxy' }; } catch(e){ console.warn('[live-price] proxy fetch failed', e); }
+        const key = loadKey() || getKeyFromQuery(); if (!key) throw new Error('Metals-API key missing for direct test (proxy recommended).');
+        const direct = `https://metals-api.com/api/latest?access_key=${encodeURIComponent(key)}&base=USD&symbols=XAU,${encodeURIComponent(currency)}`;
+        const data = await fetchJSON(direct);
+        if (data && data.success === false) { const info = (data.error && (data.error.type || data.error.info)) || 'Unknown Metals-API error'; throw new Error('Metals-API: ' + info); }
+        const rXAU = data?.rates?.XAU; const rCUR = currency==='USD' ? 1 : data?.rates?.[currency];
+        if (rXAU && rCUR){ const usdPerXAU = 1 / rXAU; const curPerXAU = usdPerXAU * rCUR; return { rate: curPerXAU, date: data.date || '', src: 'metals-direct' }; }
+        throw new Error('Metals-API: missing rates in response');
+      }
+
+      async function prefillOnLoad(){
+        if (!qtyEl.value) qtyEl.value = '1'; unitEl.value = unitEl.value || 'kg';
+        const qKey = getKeyFromQuery(); if (qKey && !loadKey()) saveKey(qKey); if (metalsKeyInput) metalsKeyInput.value = loadKey();
+        if (!ozPriceEl.value){
+          try { const cur = currencyEl.value || 'USD'; setLiveStatus('Fetching live gold spot…'); const { rate, date, src } = await fetchSpot(cur); ozPriceEl.value = Number(rate).toFixed(2); useLiveSpot = true; setLiveStatus(`Live spot loaded (${cur}) • ${date} • ${src}`); }
+          catch(e){ const inSandbox = String(location.href).startsWith('about:'); setLiveStatus((inSandbox?'Preview may block network. ':'') + (e && e.message ? e.message : 'Could not fetch live spot. Enter manually.')); }
+        }
+        compute();
+      }
+
+      async function maybeRefetchOnCurrency(){ if (!useLiveSpot) return; try { const cur = currencyEl.value || 'USD'; setLiveStatus('Fetching live gold spot…'); const { rate, date, src } = await fetchSpot(cur); ozPriceEl.value = Number(rate).toFixed(2); setLiveStatus(`Live spot updated (${cur}) • ${date} • ${src}`); compute(); } catch(e){ setLiveStatus(e && e.message ? e.message : 'Could not update live spot.'); } }
+
+      function compute(){
+        const currency = currencyEl.value; const ozPrice = numberOrZero(ozPriceEl.value); const qty = numberOrZero(qtyEl.value); const unit = unitEl.value; const fineness = currentFineness();
+        const validOZ = ozPrice > 0; errorEl.style.display = validOZ ? 'none' : 'block'; if (!validOZ){ perGramEl.textContent='—'; perKgEl.textContent='—'; totalEl.textContent='—'; persistState(); return; }
+        const pricePerGramPure = ozPrice / TROY_OUNCE_IN_GRAMS; const pricePerKgPure = pricePerGramPure * 1000; const pricePerGramAdj = pricePerGramPure * fineness; const pricePerKgAdj = pricePerKgPure * fineness;
+        perGramEl.textContent = fmtMoney(pricePerGramAdj, currency); perKgEl.textContent = fmtMoney(pricePerKgAdj, currency);
+        if (qty > 0) totalEl.textContent = fmtMoney((unit==='g'? qty*pricePerGramAdj : qty*pricePerKgAdj), currency); else totalEl.textContent = '—';
+        const params = buildParams(); if (canUseHistory()){ try { history.replaceState({}, '', location.pathname + '?' + params.toString()); } catch {} } persistState();
+      }
+
+      function restoreFromQuery(){ const q=new URLSearchParams(location.search); const cur=q.get('cur'), oz=q.get('oz'), qty=q.get('qty'), unit=q.get('unit'), karat=q.get('karat'), fineness=q.get('fineness'); if(cur)currencyEl.value=cur; if(oz)ozPriceEl.value=oz; if(qty)qtyEl.value=qty; if(unit)unitEl.value=unit; if(karat)purityEl.value=karat; if(karat==='custom'){ finenessWrap.style.display=''; if(fineness)finenessEl.value=fineness; } }
+
+      function onShareClick(){ const params=buildParams(); const url=canUseHistory()?(location.origin+location.pathname+'?'+params.toString()):null; const payload=url||('?'+lastParams); const shareData={title:'Gold Price Converter',text:url?'Use this link pre-filled with my inputs:':'Append this query to your hosted URL:',url:url||undefined}; (async()=>{ try{ if(url&&navigator.share){ await navigator.share(shareData); return; } if(navigator.clipboard){ await navigator.clipboard.writeText(payload); alert(url?'Link copied to clipboard':'Query copied to clipboard'); } else { alert(payload); } } catch{ try{ await navigator.clipboard.writeText(payload); alert('Copied to clipboard'); }catch{} } })(); }
+      function onResetClick(){ ozPriceEl.value=''; qtyEl.value=''; unitEl.value='kg'; purityEl.value='24'; finenessEl.value=''; finenessWrap.style.display='none'; useLiveSpot=false; if (canUseHistory()) { try { history.replaceState({}, '', location.pathname); } catch {} } try { localStorage.removeItem(STORAGE_KEY); } catch {} compute(); }
+      const attach = (id, fn) => { const n=document.getElementById(id); if(n) n.addEventListener('click', fn); };
+
+      ['input','change'].forEach(evt => { currencyEl.addEventListener(evt, compute); ozPriceEl.addEventListener(evt, compute); qtyEl.addEventListener(evt, compute); unitEl.addEventListener(evt, compute); purityEl.addEventListener(evt, ()=>{ const isCustom=purityEl.value==='custom'; finenessWrap.style.display=isCustom?'':'none'; if(!isCustom) finenessEl.value=''; compute(); }); finenessEl.addEventListener(evt, compute); });
+      if (refreshBtn) refreshBtn.addEventListener('click', (e)=>{ e.preventDefault(); useLiveSpot = true; maybeRefetchOnCurrency(); });
+      ozPriceEl.addEventListener('input', ()=>{ useLiveSpot = false; setLiveStatus(''); });
+      currencyEl.addEventListener('change', ()=>{ maybeRefetchOnCurrency(); });
+
+      attach('shareBtnBottom', onShareClick); attach('resetBtnBottom', onResetClick);
+
+      // Debug panel
+      const log = (...a)=>{ if(!debugLog)return; debugLog.value += a.join(' ') + "\n"; debugLog.scrollTop = debugLog.scrollHeight; };
+      async function runDebug(){ if(!debugLog)return; debugLog.value=''; const cur=currencyEl.value||'USD'; const key=(()=>{ try{return localStorage.getItem(KEY_STORAGE)||new URLSearchParams(location.search).get('mkey')||'';}catch{return''} })(); const urls=[`/api/spot?cur=${encodeURIComponent(cur)}`, key?`https://metals-api.com/api/latest?access_key=${encodeURIComponent(key)}&base=USD&symbols=XAU,${encodeURIComponent(cur)}`:'(no direct Metals-API test URL — save a key to test)']; for(const u of urls){ log('Testing:',u); if(u.startsWith('(')){log('  skipped');continue;} try{ const t0=performance.now(); const res=await fetch(u,{cache:'no-store'}); const ms=Math.round(performance.now()-t0); log('  status:',res.status,res.statusText,'type:',res.type,`(${ms}ms)`); const txt=await res.text(); log('  body:',txt.slice(0,400)+(txt.length>400?'…':'')); }catch(e){ log('  FAILED →',e&&e.message?e.message:String(e)); } } log('Debug done.'); }
+      if (debugBtn) debugBtn.addEventListener('click', runDebug);
+      if (saveKeyBtn) saveKeyBtn.addEventListener('click', ()=>{ try{ localStorage.setItem(KEY_STORAGE,(metalsKeyInput.value||'').trim()); }catch{} alert('Saved locally. Reload and run debug or press ↻.'); });
+
+      // Inline code viewers & icon generators
+      const SPOT_JS_SOURCE = [
+        "// api/spot.js — Vercel Serverless Function (Node.js)",
+        "module.exports = async (req, res) => {",
+        "  try {",
+        "    const cur = (req.query.cur || 'USD').toUpperCase();",
+        "    const key = process.env.METALS_API_KEY;",
+        "    if (!key) { res.status(500).json({ error: 'Missing METALS_API_KEY env var' }); return; }",
+        "    const url = `https://metals-api.com/api/latest?access_key=${encodeURIComponent(key)}&base=USD&symbols=XAU,${encodeURIComponent(cur)}`;",
+        "    const r = await fetch(url);",
+        "    const data = await r.json();",
+        "    if (!data || data.success === false) { res.status(502).json({ error: data && data.error ? data.error : 'Bad response from Metals-API' }); return; }",
+        "    const rXAU = data.rates && data.rates.XAU; // XAU per 1 USD",
+        "    const rCUR = cur === 'USD' ? 1 : (data.rates && data.rates[cur]); // CUR per 1 USD",
+        "    if (!rXAU || !rCUR) { res.status(502).json({ error: 'Missing XAU or currency rate' }); return; }",
+        "    const usdPerXAU = 1 / rXAU;          // USD per XAU",
+        "    const curPerXAU = usdPerXAU * rCUR;  // CUR per XAU",
+        "    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');",
+        "    res.status(200).json({ currency: cur, oz: curPerXAU, date: data.date, base: 'USD', source: 'metals-api' });",
+        "  } catch (e) {",
+        "    res.status(500).json({ error: String(e && e.message ? e.message : e) });",
+        "  }",
+        "};",
+      ].join('\n');
+      const MANIFEST_SOURCE = JSON.stringify({
+        name: "Gold Price Converter",
+        short_name: "Gold",
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#2563eb",
+        icons: [
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      }, null, 2);
+      const SW_SOURCE = [
+        "const CACHE = 'gold-converter-v1';",
+        "const PRECACHE = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];",
+        "self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting())); });",
+        "self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });",
+        "self.addEventListener('fetch', (event) => {",
+        "  const req = event.request; const url = new URL(req.url);",
+        "  if (url.pathname.startsWith('/api/spot')) {",
+        "    // Network-first for fresh prices, fallback to cache",
+        "    event.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; }).catch(() => caches.match(req)));",
+        "    return;",
+        "  }",
+        "  // Cache-first for static assets",
+        "  event.respondWith(caches.match(req).then(cached => cached || fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })));",
+        "});",
+      ].join('\n');
+
+      // populate code blocks & copy buttons
+      const spotPre = document.getElementById('spotCode'); if (spotPre) spotPre.textContent = SPOT_JS_SOURCE;
+      const copySpotBtn = document.getElementById('copySpotBtn'); if (copySpotBtn) copySpotBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(SPOT_JS_SOURCE); copySpotBtn.textContent='Copied!'; setTimeout(()=>copySpotBtn.textContent='Copy api/spot.js',1200);}catch{alert('Copy failed.')}});
+      const manifestPre = document.getElementById('manifestCode'); if (manifestPre) manifestPre.textContent = MANIFEST_SOURCE;
+      const copyManifestBtn = document.getElementById('copyManifestBtn'); if (copyManifestBtn) copyManifestBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(MANIFEST_SOURCE); copyManifestBtn.textContent='Copied!'; setTimeout(()=>copyManifestBtn.textContent='Copy manifest.webmanifest',1200);}catch{alert('Copy failed.')}});
+      const swPre = document.getElementById('swCode'); if (swPre) swPre.textContent = SW_SOURCE;
+      const copySwBtn = document.getElementById('copySwBtn'); if (copySwBtn) copySwBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(SW_SOURCE); copySwBtn.textContent='Copied!'; setTimeout(()=>copySwBtn.textContent='Copy sw.js',1200);}catch{alert('Copy failed.')}});
+
+      // Simple icon generator (placeholder PNGs)
+      function dlIcon(size){ const cv=document.createElement('canvas'); cv.width=cv.height=size; const ctx=cv.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size); ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(size/2, size/2, size*0.44, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='#ffffff'; ctx.font = `${Math.round(size*0.34)}px system-ui, -apple-system, Segoe UI, Roboto, Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('Au', size/2, size/2+size*0.03); cv.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`icon-${size}.png`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1500); }); }
+      const b192=document.getElementById('gen192'); if (b192) b192.addEventListener('click', ()=> dlIcon(192));
+      const b512=document.getElementById('gen512'); if (b512) b512.addEventListener('click', ()=> dlIcon(512));
+
+      // Init
+      function restoreFromQuery(){ const q=new URLSearchParams(location.search); const cur=q.get('cur'), oz=q.get('oz'), qty=q.get('qty'), unit=q.get('unit'), karat=q.get('karat'), fineness=q.get('fineness'); if(cur)currencyEl.value=cur; if(oz)ozPriceEl.value=oz; if(qty)qtyEl.value=qty; if(unit)unitEl.value=unit; if(karat)purityEl.value=karat; if(karat==='custom'){ finenessWrap.style.display=''; if(fineness)finenessEl.value=fineness; } }
+      restoreFromQuery(); if (!location.search) restoreFromStorage(); prefillOnLoad(); compute();
+    })();
+  </script>
+</body>
+</html>
