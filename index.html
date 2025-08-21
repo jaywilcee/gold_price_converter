@@ -41,6 +41,9 @@
     .sheet p{margin:4px 0;color:#475569;font-size:.9rem}
     .sheet .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .sheet .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+      /* Hide admin-only panels by default; reveal when body.admin is set */
+    .adminOnly{display:none}
+    body.admin .adminOnly{display:block}
   </style>
 </head>
 <body>
@@ -127,7 +130,7 @@
         </div>
       </div>
 
-      <details class="debug">
+      <details class="debug adminOnly">
         <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Connectivity & Live Price Debug</summary>
         <div class="help">Tests your Vercel proxy (<code>/api/spot</code>). Optionally test Metals-API directly by saving a key locally (for your browser only).</div>
         <div style="display:grid; gap:8px; margin-top:8px;">
@@ -147,7 +150,7 @@
         </div>
       </details>
 
-      <details class="tests">
+      <details class="tests adminOnly">
         <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Run quick self-tests</summary>
         <div class="help">Checks core math and purity handling (2-dec rounding for comparison).</div>
         <div style="margin-top:8px; display:grid; gap:8px;">
@@ -157,7 +160,7 @@
         </div>
       </details>
 
-      <details class="debug">
+      <details class="debug adminOnly">
         <summary style="cursor:pointer; color:#0f172a; font-weight:600;">Vercel serverless function: <code>api/spot.js</code> (click to view/copy)</summary>
         <div class="help">Create a file at <code>api/spot.js</code> in your repo, then paste the code below. On Vercel, set <code>METALS_API_KEY</code> in Project → Settings → Environment Variables.</div>
         <div style="display:grid; gap:8px; margin-top:8px;">
@@ -166,7 +169,7 @@
         </div>
       </details>
 
-      <details class="debug">
+      <details class="debug adminOnly">
         <summary style="cursor:pointer; color:#0f172a; font-weight:600;">PWA files: <code>manifest.webmanifest</code> & <code>sw.js</code> (click to view/copy)</summary>
         <div class="help">Add both files at the repo root. Also add icons at <code>/icons/icon-192.png</code> and <code>/icons/icon-512.png</code>. Use the button to generate simple placeholder icons.</div>
         <div style="display:grid; gap:8px; margin-top:8px;">
@@ -243,6 +246,14 @@
 
       let deferredPrompt = null; // for Android's beforeinstallprompt
       let lastParams = ''; let useLiveSpot = false;
+
+      // --- Admin gate: hide debug/helper panels for regular users ---
+      const ADMIN_KEY = 'gpc_admin';
+      function isLocalhost(){ return ['localhost','127.0.0.1','::1'].includes(location.hostname); }
+      function syncAdminFromQuery(){ try { const p = new URLSearchParams(location.search); const f = p.get('admin'); if (f==='1'){ localStorage.setItem(ADMIN_KEY,'1'); if (history && history.replaceState) history.replaceState({}, '', location.pathname); } else if (f==='0'){ localStorage.removeItem(ADMIN_KEY); if (history && history.replaceState) history.replaceState({}, '', location.pathname); } } catch {} }
+      function isAdmin(){ try { return isLocalhost() || localStorage.getItem(ADMIN_KEY)==='1'; } catch { return isLocalhost(); } }
+      syncAdminFromQuery();
+      if (isAdmin()) { document.body.classList.add('admin'); }
 
       const numberOrZero = (v) => { const n = parseFloat(String(v).replace(/,/g, '')); return Number.isFinite(n) ? n : 0; };
       const fmtMoney = (v, cur) => { try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(v); } catch { return (v||0).toFixed(2)+' '+cur; } };
@@ -402,16 +413,62 @@
         "});",
       ].join('\n');
 
-      // populate code blocks & copy buttons
+      // populate code blocks, robust copy helpers, & copy buttons
       const spotPre = document.getElementById('spotCode'); if (spotPre) spotPre.textContent = SPOT_JS_SOURCE;
-      const copySpotBtn = document.getElementById('copySpotBtn'); if (copySpotBtn) copySpotBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(SPOT_JS_SOURCE); copySpotBtn.textContent='Copied!'; setTimeout(()=>copySpotBtn.textContent='Copy api/spot.js',1200);}catch{alert('Copy failed.')}});
       const manifestPre = document.getElementById('manifestCode'); if (manifestPre) manifestPre.textContent = MANIFEST_SOURCE;
-      const copyManifestBtn = document.getElementById('copyManifestBtn'); if (copyManifestBtn) copyManifestBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(MANIFEST_SOURCE); copyManifestBtn.textContent='Copied!'; setTimeout(()=>copyManifestBtn.textContent='Copy manifest.webmanifest',1200);}catch{alert('Copy failed.')}});
       const swPre = document.getElementById('swCode'); if (swPre) swPre.textContent = SW_SOURCE;
-      const copySwBtn = document.getElementById('copySwBtn'); if (copySwBtn) copySwBtn.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(SW_SOURCE); copySwBtn.textContent='Copied!'; setTimeout(()=>copySwBtn.textContent='Copy sw.js',1200);}catch{alert('Copy failed.')}});
+
+      // Robust copy helper: uses Clipboard API on HTTPS, falls back to textarea+execCommand, finally selects code for manual copy
+      async function robustCopy(text, btn, originalLabel){
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.top='-9999px';
+            document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          }
+          if (btn) { btn.textContent = 'Copied!'; setTimeout(()=> btn.textContent = originalLabel, 1400); }
+        } catch (err) {
+          try {
+            const pre = btn && btn.nextElementSibling ? btn.nextElementSibling : null;
+            if (pre) {
+              const range = document.createRange(); range.selectNodeContents(pre);
+              const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+            }
+          } catch {}
+          alert('Copy is blocked on this browser. The code has been selected — please copy manually.');
+        }
+      }
+
+      const copySpotBtn = document.getElementById('copySpotBtn');
+      if (copySpotBtn) copySpotBtn.addEventListener('click', ()=> robustCopy(SPOT_JS_SOURCE, copySpotBtn, 'Copy api/spot.js'));
+
+      const copyManifestBtn = document.getElementById('copyManifestBtn');
+      if (copyManifestBtn) copyManifestBtn.addEventListener('click', ()=> robustCopy(MANIFEST_SOURCE, copyManifestBtn, 'Copy manifest.webmanifest'));
+
+      const copySwBtn = document.getElementById('copySwBtn');
+      if (copySwBtn) copySwBtn.addEventListener('click', ()=> robustCopy(SW_SOURCE, copySwBtn, 'Copy sw.js'));
 
       // Simple icon generator (placeholder PNGs)
-      function dlIcon(size){ const cv=document.createElement('canvas'); cv.width=cv.height=size; const ctx=cv.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size); ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(size/2, size/2, size*0.44, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='#ffffff'; ctx.font = `${Math.round(size*0.34)}px system-ui, -apple-system, Segoe UI, Roboto, Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('Au', size/2, size/2+size*0.03); cv.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`icon-${size}.png`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1500); }); }
+      function dlIcon(size){
+      const cv=document.createElement('canvas'); cv.width=cv.height=size; const ctx=cv.getContext('2d');
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size);
+      ctx.fillStyle='#2563eb'; ctx.beginPath(); ctx.arc(size/2, size/2, size*0.44, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ffffff'; ctx.font = `${Math.round(size*0.34)}px system-ui, -apple-system, Segoe UI, Roboto, Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('Au', size/2, size/2+size*0.03);
+      const trigger = (href) => { const a=document.createElement('a'); a.href=href; a.download=`icon-${size}.png`; document.body.appendChild(a); a.click(); setTimeout(()=>{ try{ document.body.removeChild(a);}catch{} }, 100); };
+      if (cv.toBlob) {
+        cv.toBlob((blob)=>{
+          if (blob) {
+            const url=URL.createObjectURL(blob); trigger(url); setTimeout(()=>URL.revokeObjectURL(url), 1500);
+          } else {
+            trigger(cv.toDataURL('image/png'));
+          }
+        }, 'image/png');
+      } else {
+        trigger(cv.toDataURL('image/png'));
+      }
+    }
       const b192=document.getElementById('gen192'); if (b192) b192.addEventListener('click', ()=> dlIcon(192));
       const b512=document.getElementById('gen512'); if (b512) b512.addEventListener('click', ()=> dlIcon(512));
 
